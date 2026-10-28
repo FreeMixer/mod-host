@@ -1,0 +1,62 @@
+name: ci
+
+# Builds mod-host with the carried patches, runs the tests that need no plugins
+# (the socket protocol against a fake backend, the AddressSanitizer tests of the
+# line splitter and the socket framing) and a smoke test of the real host on a
+# dummy JACK server.
+
+on:
+  push:
+    branches: [freemixer]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ubuntu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config python3 \
+            liblilv-dev libjack-jackd2-dev jackd2 libreadline-dev lv2-dev libfftw3-dev
+      - name: Build
+        run: make -j"$(nproc)" && make lib
+      - name: Protocol tests
+        run: timeout 300 make test-protocol
+      - name: Splitter and framing tests
+        run: timeout 300 make -C tests utils-run socket-run
+      - name: Smoke test
+        run: timeout 120 sh .github/scripts/smoke-test.sh
+
+  fedora:
+    runs-on: ubuntu-latest
+    container: fedora:44
+    timeout-minutes: 20
+    steps:
+      - name: Install build dependencies
+        run: |
+          dnf -y install gcc make git python3 pkgconf-pkg-config libasan \
+            lilv-devel jack-audio-connection-kit jack-audio-connection-kit-devel \
+            readline-devel lv2-devel fftw-devel
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          make -j"$(nproc)" && make lib
+      - name: Protocol tests
+        run: timeout 300 make test-protocol
+      - name: Splitter and framing tests
+        run: timeout 300 make -C tests utils-run socket-run
+      - name: Smoke test
+        run: timeout 120 sh .github/scripts/smoke-test.sh
