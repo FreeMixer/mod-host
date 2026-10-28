@@ -175,9 +175,9 @@ char** strarr_split(char *str)
         if (*pstr == token && quote == 0)
         {
             *pstr = '\0';
-            list[++count] = pstr + 1;
             while (*(pstr + 1) && (*(pstr + 1) == token))
                 pstr++;
+            list[++count] = pstr + 1;
         }
 #ifdef ENABLE_QUOTATION_MARKS
         else if (*pstr == '\\' && *(pstr+1) == '"')
