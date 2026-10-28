@@ -500,7 +500,7 @@ static void *client_thread(void *arg)
 
     for (const exchange_t *ex = session->exchanges; ex->command; ex++)
     {
-        if (send(fd, ex->command, strlen(ex->command), 0) < 0 || read_reply(fd, reply, sizeof(reply)) != 0)
+        if (send(fd, ex->command, strlen(ex->command) + 1, 0) < 0 || read_reply(fd, reply, sizeof(reply)) != 0)
         {
             printf("FAIL '%s': no reply\n", ex->command);
             g_failures++;
@@ -627,7 +627,7 @@ static void *feedback_client_thread(void *arg)
         goto out;
     }
 
-    if (send(fd, "monitor_output 3 level", 22, 0) < 0 || read_reply(fd, reply, sizeof(reply)) != 0
+    if (send(fd, "monitor_output 3 level", 23, 0) < 0 || read_reply(fd, reply, sizeof(reply)) != 0
         || strcmp(reply, "resp 1") != 0)
     {
         printf("FAIL 'monitor_output 3 level' with a feedback client\n");
