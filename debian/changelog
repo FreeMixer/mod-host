@@ -1,0 +1,7 @@
+mod-host (0.10.6+git20261019.12335c2-1) unstable; urgency=medium
+
+  * Upstream mod-audio/mod-host at 12335c2 with the patches of the
+    freemixer branch: pull requests 81, 82, 98, 100, 101, 104 to 109,
+    112 and 113.
+
+ -- Pau Aliagas <linuxnow@gmail.com>  Wed, 28 Oct 2026 23:30:00 +0100

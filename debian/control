@@ -1,0 +1,50 @@
+Source: mod-host
+Section: sound
+Priority: optional
+Maintainer: Pau Aliagas <linuxnow@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               pkgconf,
+               python3,
+               liblilv-dev,
+               libjack-jackd2-dev | libjack-dev,
+               libreadline-dev,
+               lv2-dev,
+               libfftw3-dev
+Standards-Version: 4.6.2
+Homepage: https://github.com/FreeMixer/mod-host
+Vcs-Git: https://github.com/FreeMixer/mod-host.git -b freemixer
+Vcs-Browser: https://github.com/FreeMixer/mod-host/tree/freemixer
+Rules-Requires-Root: no
+
+Package: mod-host
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Recommends: jackd2 | pipewire-jack
+Description: LV2 host for JACK, controllable over a socket
+ mod-host loads LV2 plugins as JACK clients and is driven over a TCP socket
+ or an interactive command line. This build carries the patches listed in
+ the README of the FreeMixer fork, each one a pull request to
+ mod-audio/mod-host.
+
+Package: libmod-host-protocol0
+Section: libs
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: mod-host socket server, line protocol and command dispatch
+ The socket server, the line protocol and the command dispatch of mod-host,
+ without any plugin format behind them, as a shared library, for hosts that
+ answer the mod-host protocol with a plugin backend of their own.
+
+Package: mod-host-protocol-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Depends: libmod-host-protocol0 (= ${binary:Version}), ${misc:Depends}
+Provides: libmod-host-protocol-dev
+Conflicts: libmod-host-protocol-dev
+Replaces: libmod-host-protocol-dev
+Description: mod-host protocol library, development files
+ Headers, the pkg-config file and the backend scenarios of
+ libmod-host-protocol, for hosts that answer the mod-host protocol with a
+ plugin backend of their own.

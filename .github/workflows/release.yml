@@ -1,0 +1,105 @@
+name: release
+
+# A version tag v<version>, where <version> is the upstream part of the
+# debian/changelog version, builds the DEBs for amd64 and arm64 on Debian
+# bookworm (Raspberry Pi OS) and trixie, each on a runner of its own
+# architecture, lints them and attaches them to the GitHub release of the tag.
+# A manual run builds the same DEBs as an artifact and releases nothing.
+#
+# Not done here: signing an apt index and publishing into the package channel.
+# That needs the organisation's packages signing key and a token for the Pages
+# repository, which this repository is not given.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  deb:
+    name: deb ${{ matrix.suite }} ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+        suite: [bookworm, trixie]
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    container: debian:${{ matrix.suite }}
+    timeout-minutes: 30
+    steps:
+      - name: Install packaging tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential devscripts debhelper equivs git lintian ca-certificates
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Check the tag matches debian/changelog
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          version=$(dpkg-parsechangelog -S Version)
+          upstream=${version%-*}
+          if [ "$GITHUB_REF_NAME" != "v$upstream" ]; then
+            echo "tag $GITHUB_REF_NAME does not match debian/changelog version $version (expected v$upstream)"
+            exit 1
+          fi
+
+      - name: Install build dependencies
+        run: mk-build-deps -i -r -t 'apt-get -y --no-install-recommends' debian/control
+
+      - name: Build
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          dpkg-buildpackage -b -us -uc
+          mkdir -p out
+          for f in ../*.deb; do
+            b=$(basename "$f" .deb)
+            cp "$f" "out/${b}_${{ matrix.suite }}.deb"
+          done
+          ls -l out
+
+      - name: Lint
+        run: lintian --fail-on error ../*.changes
+
+      - name: Install and smoke test the package
+        run: |
+          apt-get install -y --no-install-recommends python3 jackd2 \
+            ../mod-host_*.deb ../libmod-host-protocol0_*.deb ../mod-host-protocol-dev_*.deb
+          pkg-config --modversion mod-host-protocol
+          cp /usr/bin/mod-host ./mod-host
+          timeout 120 sh .github/scripts/smoke-test.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb-${{ matrix.suite }}-${{ matrix.arch }}
+          path: out/*.deb
+
+  release:
+    needs: deb
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: debs
+          merge-multiple: true
+      - name: Attach the DEBs to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --verify-tag \
+                 --title "$GITHUB_REF_NAME" --notes "mod-host with the patches of the freemixer branch."
+          gh release upload "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --clobber debs/*.deb

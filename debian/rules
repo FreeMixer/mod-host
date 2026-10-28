@@ -1,0 +1,29 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+include /usr/share/dpkg/architecture.mk
+include /usr/share/dpkg/buildflags.mk
+
+# The upstream Makefile appends its own flags to CFLAGS (including -c), so
+# CFLAGS comes from the environment; LDFLAGS is given on the command line to
+# drop the Makefile's -s and leave stripping to dh_strip.
+MAKE_VARS = PREFIX=/usr LIBDIR=/usr/lib/$(DEB_HOST_MULTIARCH) LDFLAGS="$(LDFLAGS)"
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	dh_auto_build -- $(MAKE_VARS) all
+	dh_auto_build -- $(MAKE_VARS) lib
+
+override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+	$(MAKE) $(MAKE_VARS) test-protocol
+endif
+
+override_dh_auto_install:
+	$(MAKE) $(MAKE_VARS) DESTDIR=$(CURDIR)/debian/tmp install install-lib
+
+override_dh_auto_clean:
+	$(MAKE) clean
+	rm -f libmod-host-protocol.so*
