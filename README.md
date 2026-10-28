@@ -1,6 +1,51 @@
 mod-host
 ========
 
+FreeMixer fork
+--------------
+
+This repository is a fork of [mod-audio/mod-host](https://github.com/mod-audio/mod-host).
+
+- `master` mirrors upstream `master` and carries no changes of ours.
+- `freemixer`, the default branch, is upstream `master` plus one commit per pull request below. Every change is
+  meant for upstream; a patch is dropped here once upstream merges it.
+
+| pull request | what | state upstream |
+|---|---|---|
+| [#81](https://github.com/mod-audio/mod-host/pull/81) | any number of spaces between protocol words, plus a follow-up so the next word does not start on a space | open |
+| [#82](https://github.com/mod-audio/mod-host/pull/82) | the missing `-t` short option | open |
+| [#98](https://github.com/mod-audio/mod-host/pull/98) | heap overread on a zero-size Path property (the part of that pull request carried here) | closed, not merged |
+| [#100](https://github.com/mod-audio/mod-host/pull/100) | three crashes found running a large plugin catalog | open |
+| [#101](https://github.com/mod-audio/mod-host/pull/101) | `add` can name its JACK client | open |
+| [#104](https://github.com/mod-audio/mod-host/pull/104) | three small cleanups in the socket protocol code | open |
+| [#105](https://github.com/mod-audio/mod-host/pull/105) | the effect verbs registered through a backend interface | open |
+| [#106](https://github.com/mod-audio/mod-host/pull/106) | tests for the socket protocol, no JACK needed | open |
+| [#107](https://github.com/mod-audio/mod-host/pull/107) | the socket protocol as an opt-in shared library, `libmod-host-protocol` | open |
+| [#108](https://github.com/mod-audio/mod-host/pull/108) | a backend can answer `monitor_output` and send `output_set` | open |
+| [#109](https://github.com/mod-audio/mod-host/pull/109) | plugin info commands: `param_info`, `remote_pages`, `track_info` | open |
+| [#112](https://github.com/mod-audio/mod-host/pull/112) | trimming spaces no longer reads before an empty string | open |
+| [#113](https://github.com/mod-audio/mod-host/pull/113) | socket input split into NUL-terminated commands, plus a follow-up so the protocol tests send the NUL | open |
+
+Packages:
+
+- Debian (bookworm, which Raspberry Pi OS uses, and trixie; amd64 and arm64): `debian/` in this branch builds
+  `mod-host`, `libmod-host-protocol0` and `mod-host-protocol-dev`. A `v<version>` tag runs
+  `.github/workflows/release.yml`, which attaches them to the GitHub release.
+- RPM: the Fedora packages `mod-host`, `mod-host-protocol` and `mod-host-protocol-devel` are built from upstream
+  commit f14a230 with these same pull requests applied as patch files, by the audinux spec
+  ([audinux/fedora-spec#94](https://github.com/audinux/fedora-spec/pull/94)) and by
+  [FreeMixer/.github](https://github.com/FreeMixer/.github/tree/main/packaging/mod-host) for our channel.
+
+[plugin-hostd](https://github.com/FreeMixer/plugin-hostd) speaks a superset of this protocol: the same socket,
+ports and replies, with verbs of its own. Its protocol is described in the
+[Protocol section of its README](https://github.com/FreeMixer/plugin-hostd#protocol) and declared in
+[`protocol/`](https://github.com/FreeMixer/plugin-hostd/tree/main/protocol).
+
+CI (`.github/workflows/ci.yml`) builds on Ubuntu and Fedora 44, runs the protocol, line splitter and socket
+framing tests, and starts `mod-host -n -p 5555` on a dummy JACK server to check it answers `cpu_load` with
+`resp 0`. The commit message and SPDX header checks of the other FreeMixer repositories do not apply here: this
+is upstream's code, kept in upstream's style.
+
 About
 -----
 
