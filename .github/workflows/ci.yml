@@ -4,7 +4,8 @@ name: ci
 # pkg-config alone, runs the tests that need no plugins
 # (the socket protocol against a fake backend, the AddressSanitizer tests of the
 # line splitter and the socket framing) and a smoke test of the real host on a
-# dummy JACK server.
+# dummy JACK server. The fuzz job builds the libFuzzer harnesses of fuzz/ and runs each for
+# a short time over its seed corpus.
 
 on:
   push:
@@ -39,6 +40,28 @@ jobs:
         run: timeout 300 make -C tests utils-run socket-run
       - name: Smoke test
         run: timeout 120 sh .github/scripts/smoke-test.sh
+
+  fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang
+          sudo apt-get install -y --no-install-recommends "libclang-rt-$(clang -dumpversion | cut -d. -f1)-dev" || true
+      - name: Build the harnesses
+        run: make fuzz
+      - name: Run each harness over its seed corpus
+        run: make fuzz-run FUZZ_TIME=30
+      - name: Keep what a failing run found
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-artifacts
+          path: build/fuzz/artifacts/
+          if-no-files-found: ignore
 
   fedora:
     runs-on: ubuntu-latest
