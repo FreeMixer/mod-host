@@ -36,12 +36,19 @@ Packages:
   ([audinux/fedora-spec#94](https://github.com/audinux/fedora-spec/pull/94)) and by
   [FreeMixer/.github](https://github.com/FreeMixer/.github/tree/main/packaging/mod-host) for our channel.
 
+The protocol library is opt-in: `make lib` builds it and `make install-lib PREFIX=... [LIBDIR=...] [DESTDIR=...]`
+installs `libmod-host-protocol.so.0` with its soname and development links, its headers under
+`<includedir>/mod-host`, the scenario corpus under `<datadir>/mod-host` and `mod-host-protocol.pc` under
+`<libdir>/pkgconfig`, so another host builds against it with `pkg-config --cflags --libs mod-host-protocol` and no
+mod-host checkout. `make install` installs the host only, as upstream's does. Both packagings run the two targets.
+
 [plugin-hostd](https://github.com/FreeMixer/plugin-hostd) speaks a superset of this protocol: the same socket,
 ports and replies, with verbs of its own. Its protocol is described in the
 [Protocol section of its README](https://github.com/FreeMixer/plugin-hostd#protocol) and declared in
 [`protocol/`](https://github.com/FreeMixer/plugin-hostd/tree/main/protocol).
 
-CI (`.github/workflows/ci.yml`) builds on Ubuntu and Fedora 44, runs the protocol, line splitter and socket
+CI (`.github/workflows/ci.yml`) builds on Ubuntu and Fedora 44, checks `make install-lib` with `make
+test-install-lib`, runs the protocol, line splitter and socket
 framing tests, and starts `mod-host -n -p 5555` on a dummy JACK server to check it answers `cpu_load` with
 `resp 0`. The commit message and SPDX header checks of the other FreeMixer repositories do not apply here: this
 is upstream's code, kept in upstream's style.

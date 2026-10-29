@@ -1,6 +1,7 @@
 name: ci
 
-# Builds mod-host with the carried patches, runs the tests that need no plugins
+# Builds mod-host with the carried patches, checks `make install-lib` from
+# pkg-config alone, runs the tests that need no plugins
 # (the socket protocol against a fake backend, the AddressSanitizer tests of the
 # line splitter and the socket framing) and a smoke test of the real host on a
 # dummy JACK server.
@@ -30,6 +31,8 @@ jobs:
             liblilv-dev libjack-jackd2-dev jackd2 libreadline-dev lv2-dev libfftw3-dev
       - name: Build
         run: make -j"$(nproc)" && make lib
+      - name: Install the protocol library
+        run: timeout 300 make test-install-lib
       - name: Protocol tests
         run: timeout 300 make test-protocol
       - name: Splitter and framing tests
@@ -54,6 +57,8 @@ jobs:
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           make -j"$(nproc)" && make lib
+      - name: Install the protocol library
+        run: timeout 300 make test-install-lib
       - name: Protocol tests
         run: timeout 300 make test-protocol
       - name: Splitter and framing tests
