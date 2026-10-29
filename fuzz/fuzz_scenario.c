@@ -39,12 +39,14 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
            input: host-scenarios */
         if (n != list.count || n > HOST_SCENARIO_MAX_LINES)
             abort();
+        int whole = 0;
+        for (int i = 0; i < n; i++)
+            whole += list.lines[i].command != NULL && list.lines[i].reply != NULL;
         /* Each line kept has its command and its reply.
            mutant: src/host-scenario.c:238 `sc->reply = substitute(trim(arrow + 2), vars, var_count);` -> `sc->reply = NULL;`
            input: host-scenarios */
-        for (int i = 0; i < n; i++)
-            if (list.lines[i].command == NULL || list.lines[i].reply == NULL)
-                abort();
+        if (whole != n)
+            abort();
         host_scenario_free(&list);
     }
     return 0;

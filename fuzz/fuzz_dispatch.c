@@ -10,6 +10,21 @@
 
 static unsigned g_salt;
 
+/* "resp", a space and an integer, then the end or a space and the verb's values */
+static int is_resp_line(const char *reply)
+{
+    const char *p = reply + 5;
+    if (strncmp(reply, "resp ", 5) != 0)
+        return 0;
+    if (*p == '-')
+        p++;
+    if (*p < '0' || *p > '9')
+        return 0;
+    while (*p >= '0' && *p <= '9')
+        p++;
+    return *p == '\0' || *p == ' ';
+}
+
 static int answer(int instance)
 {
     static const int codes[] = {
@@ -95,26 +110,14 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
            input: scenario-1 */
         if (memchr(reply, '\0', (size_t)n) != reply + n - 1)
             abort();
-        /* The answer is a protocol error message, or "resp" and an integer, then the end or a space.
-           mutant: src/protocol.c:276 `"resp %i"` -> `"rsp %i"`
-           input: scenario-1 */
         int known = 0;
         for (int code = -1; code >= -4 && !known; code--)
             known = strcmp(reply, protocol_error_message(code)) == 0;
-        if (!known)
-        {
-            const char *p = reply + 5;
-            if (strncmp(reply, "resp ", 5) != 0)
-                abort();
-            if (*p == '-')
-                p++;
-            if (*p < '0' || *p > '9')
-                abort();
-            while (*p >= '0' && *p <= '9')
-                p++;
-            if (*p != '\0' && *p != ' ')
-                abort();
-        }
+        /* The answer is a protocol error message, or "resp" and an integer, then the end or a space.
+           mutant: src/protocol.c:276 `"resp %i"` -> `"rsp %i"`
+           input: scenario-1 */
+        if (!known && !is_resp_line(reply))
+            abort();
     }
     fuzz_peer_drain();
     return 0;
