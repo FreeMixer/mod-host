@@ -22,3 +22,4 @@ PKGBUILD
 tests/protocol_test
 tests/host_scenarios
 libmod-host-protocol.so*
+/build/
