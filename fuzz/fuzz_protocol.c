@@ -34,7 +34,7 @@ static void check(proto_t *proto, unsigned row)
         abort();
     /* The callback that runs is the one of the command the input names: its first word is the pattern's.
        mutant: src/protocol.c:216 `g_commands[index].callback(&proto);` -> `g_commands[0].callback(&proto);`
-       input: extra-2 */
+       input: extra-9 */
     if (proto->list_count == 0 || strcmp(proto->list[0], g_table[row].verb) != 0)
         abort();
     protocol_response_int((int)proto->list_count, proto);
@@ -68,11 +68,13 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     free(msg.data);
     fuzz_peer_drain();
 
+    int messages = 0;
+    for (int code = -1; code >= -4; code--)
+        messages += protocol_error_message(code) != NULL;
     /* Each of the parser's four error codes (not found, many, few, invalid argument) has a message to send.
        mutant: src/protocol.c:297 `code >= 0` -> `code >= -1`
        input: extra-1 */
-    for (int code = -1; code >= -4; code--)
-        if (protocol_error_message(code) == NULL)
-            abort();
+    if (messages != 4)
+        abort();
     return 0;
 }
