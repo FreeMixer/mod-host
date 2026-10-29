@@ -1,3 +1,21 @@
+0.10.7
+======
+
+  - new: the socket server, protocol and command dispatch as an opt-in shared
+    library, libmod-host-protocol.so.0: `make lib` builds it, `make install-lib`
+    installs it with its headers and mod-host-protocol.pc (#107)
+  - new: the effect verbs registered through a backend interface; a backend
+    can answer monitor_output and send output_set (#105, #108)
+  - new: param_info, remote_pages and track_info (#109)
+  - new: `add` can name its JACK client (#101)
+  - new: socket protocol tests that need no JACK (#106)
+  - fix: socket input is split into NUL-terminated commands (#113)
+  - fix: any number of spaces between protocol words (#81); trimming spaces
+    no longer reads before an empty string (#112)
+  - fix: the missing -t short option (#82)
+  - fix: three crashes found running a large plugin catalog (#100); a heap
+    overread on a zero-size Path property (#98)
+
 0.10.5
 ======
 

@@ -1,3 +1,13 @@
+mod-host (0.10.7-1) unstable; urgency=medium
+
+  * 0.10.7: upstream mod-audio/mod-host at 12335c2 with the patches of the
+    freemixer branch, pull requests 81, 82, 98, 100, 101, 104 to 109, 112
+    and 113, released under a version of its own so a from-source install
+    can ask for the release that has make install-lib
+    (FreeMixer/plugin-hostd#263).
+
+ -- Pau Aliagas <linuxnow@gmail.com>  Thu, 29 Oct 2026 13:00:00 +0100
+
 mod-host (0.10.6+git20261019.12335c2-1) unstable; urgency=medium
 
   * Upstream mod-audio/mod-host at 12335c2 with the patches of the
