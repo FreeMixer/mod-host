@@ -232,6 +232,10 @@ install-lib: $(PROTOCOL_LIB)
 	    -e 's,@VERSION@,$(PROTOCOL_VERSION),' \
 	    mod-host-protocol.pc.in > $(DESTDIR)$(LIBDIR)/pkgconfig/mod-host-protocol.pc
 
+# install-lib as a consumer meets it: pkg-config alone builds against it, links and runs
+test-install-lib: $(PROTOCOL_LIB)
+	sh .github/scripts/install-lib-check.sh
+
 # manual page rule
 # Uses md2man to convert the README to groff man page
 # https://github.com/sunaku/md2man
