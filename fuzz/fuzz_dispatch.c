@@ -1,8 +1,8 @@
 /* The whole command dispatcher: host_dispatch_register() and its monitor_output, plugin-info and
    unsupported tables over a backend whose answers depend on the input, then protocol_parse(). The backend
    answers every error code the host defines, so each verb's mapping of a return value to a reply is reached.
-   Properties: no crash, no leak, and every reply is "resp <int>", a value line of a known verb or an error
-   message of protocol_error_message(). */
+   Properties: no crash, no leak, and every reply is one NUL-terminated string: "resp <int>", alone or followed
+   by the values of the verb, or an error message of protocol_error_message(). */
 #include "fuzz.h"
 #include "../src/host-backend.h"
 #include "../src/host-dispatch.h"
@@ -90,10 +90,31 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     ssize_t n = read(fuzz_peer_fd, reply, sizeof(reply) - 1);
     if (n > 0)
     {
-        reply[n] = '\0';
-        /* every answer is a single NUL-terminated string */
-        if (memchr(reply, '\0', (size_t)n + 1) == NULL)
+        /* One answer per command, sent with its NUL: the NUL is the last byte read and the only one.
+           mutant: src/protocol.c:224 `proto.response_size+1` -> `proto.response_size`
+           input: scenario-1 */
+        if (memchr(reply, '\0', (size_t)n) != reply + n - 1)
             abort();
+        /* The answer is a protocol error message, or "resp" and an integer, then the end or a space.
+           mutant: src/protocol.c:276 `"resp %i"` -> `"rsp %i"`
+           input: scenario-1 */
+        int known = 0;
+        for (int code = -1; code >= -4 && !known; code--)
+            known = strcmp(reply, protocol_error_message(code)) == 0;
+        if (!known)
+        {
+            const char *p = reply + 5;
+            if (strncmp(reply, "resp ", 5) != 0)
+                abort();
+            if (*p == '-')
+                p++;
+            if (*p < '0' || *p > '9')
+                abort();
+            while (*p >= '0' && *p <= '9')
+                p++;
+            if (*p != '\0' && *p != ' ')
+                abort();
+        }
     }
     fuzz_peer_drain();
     return 0;

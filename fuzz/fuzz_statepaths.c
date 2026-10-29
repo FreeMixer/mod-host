@@ -1,6 +1,7 @@
 /* The state directory of an instance: MakePluginStatePath() and GetPluginStateDir() with any instance and
-   any request path, below a scratch directory. Property: the path answered is the scratch directory, the
-   effect directory and the request, and nothing created is outside the scratch directory. */
+   any request path, below a scratch directory. Properties: the directory answered is exactly the scratch
+   directory and the effect directory, and the path answered is exactly that and the request ("." names the
+   effect directory itself). */
 #include "fuzz.h"
 #include "../src/state-paths.h"
 #include <stdio.h>
@@ -31,14 +32,31 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
         char *path = MakePluginStatePath(instance, g_root, request);
         if (path)
         {
-            if (strncmp(path, g_root, strlen(g_root)) != 0)
+            char *want = malloc(strlen(g_root) + strlen(request) + 32);
+            /* not a property: the harness's own allocation failed */
+            if (!want)
                 abort();
+            if (strcmp(request, ".") == 0)
+                sprintf(want, "%s/effect-%d", g_root, instance);
+            else
+                sprintf(want, "%s/effect-%d/%s", g_root, instance, request);
+            /* The path is the scratch directory, the effect directory and the request, nothing else.
+               mutant: src/state-paths.c:175 `*buf++ = '/';` -> `;`
+               input: nested */
+            if (strcmp(path, want) != 0)
+                abort();
+            free(want);
             free(path);
         }
     }
 
+    char want_dir[96];
+    snprintf(want_dir, sizeof(want_dir), "%s/effect-%d", g_root, instance);
     char *dir = GetPluginStateDir(instance, g_root);
-    if (!dir || strncmp(dir, g_root, strlen(g_root)) != 0)
+    /* The effect directory of an instance is the scratch directory and "effect-<instance>".
+       mutant: src/state-paths.c:128 `"effect-%d"` -> `"effect+%d"`
+       input: nested */
+    if (!dir || strcmp(dir, want_dir) != 0)
         abort();
     free(dir);
     free(request);
