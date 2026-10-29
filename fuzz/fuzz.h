@@ -22,6 +22,7 @@ static int fuzz_sender_fd = -1;
 static void fuzz_peer_open(void)
 {
     int fd[2];
+    /* not a property: the harness could not open its own socketpair */
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fd) != 0)
         abort();
     fuzz_sender_fd = fd[0];
@@ -41,6 +42,7 @@ static void fuzz_peer_drain(void)
 static char *fuzz_message(const uint8_t *data, size_t size)
 {
     char *copy = malloc(size + 1);
+    /* not a property: the harness's own allocation failed */
     if (!copy)
         abort();
     memcpy(copy, data, size);
