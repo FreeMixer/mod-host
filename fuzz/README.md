@@ -2,7 +2,8 @@
 
 libFuzzer harnesses (clang, AddressSanitizer, UndefinedBehaviorSanitizer) for the part of mod-host
 that reads bytes from a controller. They link the protocol sources only, so they need no JACK server
-and no plugins.
+and no plugins. `fuzz/socket_fuzz.c` stands in for `src/socket.c`: its `socket_send()` copies each reply into
+a buffer that the harness reads, so a run opens no socket. The shipped library does not contain it.
 
 | harness | what it feeds |
 | --- | --- |

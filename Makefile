@@ -265,7 +265,8 @@ src/info.h:
 # libFuzzer harnesses (fuzz/README.md): the command parser, the whole dispatcher over a backend that
 # answers every error code, the scenario file reader and the state paths. They compile the sources they
 # exercise with AddressSanitizer and UndefinedBehaviorSanitizer. `make fuzz` builds them with clang;
-# `make fuzz-run FUZZ_TIME=60` runs each over its seed corpus for that many seconds.
+# `make fuzz-run FUZZ_TIME=60` runs each over its seed corpus for that many seconds. fuzz/socket_fuzz.c
+# stands in for src/socket.c, so a reply is copied into a buffer and no socket is opened.
 FUZZ_CC        ?= clang
 FUZZ_BUILD     ?= build/fuzz
 FUZZ_TIME      ?= 60
@@ -273,7 +274,7 @@ FUZZ_HARNESSES := protocol dispatch scenario statepaths
 FUZZ_BINS      := $(FUZZ_HARNESSES:%=$(FUZZ_BUILD)/fuzz_%)
 FUZZ_CFLAGS    := -O1 -g -std=gnu99 -D_GNU_SOURCE -fno-omit-frame-pointer -fsanitize=fuzzer,address,undefined \
                   -fno-sanitize-recover=undefined
-FUZZ_SRCS      := $(SRC_DIR)/protocol.c $(SRC_DIR)/utils.c $(SRC_DIR)/socket.c $(SRC_DIR)/host-dispatch.c \
+FUZZ_SRCS      := $(SRC_DIR)/protocol.c $(SRC_DIR)/utils.c fuzz/socket_fuzz.c $(SRC_DIR)/host-dispatch.c \
                   $(SRC_DIR)/host-scenario.c $(SRC_DIR)/state-paths.c
 
 $(FUZZ_BUILD)/fuzz_%: fuzz/fuzz_%.c fuzz/fuzz.h $(FUZZ_SRCS)

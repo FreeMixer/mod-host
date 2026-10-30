@@ -30,24 +30,27 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     if (strstr(request, "..") == NULL)
     {
         char *path = MakePluginStatePath(instance, g_root, request);
-        if (path)
-        {
-            char *want = malloc(strlen(g_root) + strlen(request) + 32);
-            /* not a property: the harness's own allocation failed */
-            if (!want)
-                abort();
-            if (strcmp(request, ".") == 0)
-                sprintf(want, "%s/effect-%d", g_root, instance);
-            else
-                sprintf(want, "%s/effect-%d/%s", g_root, instance, request);
-            /* The path is the scratch directory, the effect directory and the request, nothing else.
-               mutant: src/state-paths.c:175 `*buf++ = '/';` -> `;`
-               input: nested */
-            if (strcmp(path, want) != 0)
-                abort();
-            free(want);
-            free(path);
-        }
+        /* A request below the scratch directory is made: every directory of it is created or is there, since no
+           part of a request of at most 252 bytes is longer than a file name may be.
+           mutant: src/state-paths.c:209 `mkdir(duppath, 0755) && errno != EEXIST` -> `1`
+           input: nested */
+        if (!path)
+            abort();
+        char *want = malloc(strlen(g_root) + strlen(request) + 32);
+        /* not a property: the harness's own allocation failed */
+        if (!want)
+            abort();
+        if (strcmp(request, ".") == 0)
+            sprintf(want, "%s/effect-%d", g_root, instance);
+        else
+            sprintf(want, "%s/effect-%d/%s", g_root, instance, request);
+        /* The path is the scratch directory, the effect directory and the request, nothing else.
+           mutant: src/state-paths.c:175 `*buf++ = '/';` -> `;`
+           input: nested */
+        if (strcmp(path, want) != 0)
+            abort();
+        free(want);
+        free(path);
     }
 
     char want_dir[96];
