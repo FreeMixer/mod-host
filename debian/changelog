@@ -1,3 +1,11 @@
+mod-host (0.10.8-1) unstable; urgency=medium
+
+  * 0.10.8: the protocol's command table holds 128 commands and refuses one
+    past them out loud (#6, mod-audio/mod-host#116); fuzz harnesses for the
+    protocol layer (#4, #5).
+
+ -- Pau Aliagas <linuxnow@gmail.com>  Fri, 30 Oct 2026 02:00:00 +0100
+
 mod-host (0.10.7-1) unstable; urgency=medium
 
   * 0.10.7: upstream mod-audio/mod-host at 12335c2 with the patches of the
