@@ -7,12 +7,11 @@
 #include <stdio.h>
 #include <sys/stat.h>
 
-static char g_root[64];
+static const char g_root[] = "fuzz-statepaths";
 
 int LLVMFuzzerInitialize(int *argc, char ***argv)
 {
     (void)argc; (void)argv;
-    snprintf(g_root, sizeof(g_root), "/tmp/fuzz-statepaths-%d", (int)getpid());
     mkdir(g_root, 0755);
     return 0;
 }
@@ -48,6 +47,16 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
            mutant: src/state-paths.c:175 `*buf++ = '/';` -> `;`
            input: nested */
         if (strcmp(path, want) != 0)
+            abort();
+        /* The directories of the path exist: all of it for the effect directory itself ("."), and up to its last "/"
+           for a file below it.
+           mutant: src/state-paths.c:209 `mkdir(duppath, 0755) && errno != EEXIST` -> `0`
+           input: nested */
+        char *last = strcmp(request, ".") == 0 ? NULL : strrchr(path, '/');
+        struct stat st;
+        if (last)
+            *last = '\0';
+        if (stat(path, &st) != 0 || !S_ISDIR(st.st_mode))
             abort();
         free(want);
         free(path);
