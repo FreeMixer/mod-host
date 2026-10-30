@@ -48,7 +48,7 @@
 ************************************************************************************************************************
 */
 
-#define PROTOCOL_MAX_COMMANDS       64
+#define PROTOCOL_MAX_COMMANDS       128
 
 // error messages configuration
 #define MESSAGE_COMMAND_NOT_FOUND   "not found"
@@ -99,7 +99,9 @@ typedef struct PROTO_T {
 */
 
 void protocol_parse(msg_t *msg);
-void protocol_add_command(const char *command, void (*callback)(proto_t *proto));
+/* 0, or -1 when the table already holds PROTOCOL_MAX_COMMANDS commands: the command is not registered, and stderr
+ * says which */
+int protocol_add_command(const char *command, void (*callback)(proto_t *proto));
 void protocol_response(const char *response, proto_t *proto);
 void protocol_response_int(int resp, proto_t *proto);
 void protocol_remove_commands(void);

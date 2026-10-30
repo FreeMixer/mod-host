@@ -186,6 +186,12 @@ test-protocol: tests/protocol_test
 tests/protocol_test: tests/protocol_test.c $(PROTOCOL_OBJ)
 	$(CC) $(INCS) $(filter-out -c,$(CFLAGS)) -Werror -o $@ $< $(PROTOCOL_OBJ) -lpthread -lm
 
+test-protocol-commands: tests/protocol_commands_test
+	./tests/protocol_commands_test
+
+tests/protocol_commands_test: tests/protocol_commands_test.c $(PROTOCOL_OBJ)
+	$(CC) $(INCS) $(filter-out -c,$(CFLAGS)) -Werror -o $@ $< $(PROTOCOL_OBJ) -lpthread -lm
+
 tests/host_scenarios: tests/host_scenarios.c $(PROTOCOL_OBJ)
 	$(CC) $(INCS) $(filter-out -c,$(CFLAGS)) -Werror -o $@ $< $(PROTOCOL_OBJ) -lpthread -lm
 
