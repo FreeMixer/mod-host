@@ -48,14 +48,14 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
            input: nested */
         if (strcmp(path, want) != 0)
             abort();
-        /* The directories of the path exist: all of it for the effect directory itself ("."), and up to its last "/"
-           for a file below it.
-           mutant: src/state-paths.c:209 `mkdir(duppath, 0755) && errno != EEXIST` -> `0`
-           input: nested */
         char *last = strcmp(request, ".") == 0 ? NULL : strrchr(path, '/');
         struct stat st;
         if (last)
             *last = '\0';
+        /* The directories of the path exist: all of it for the effect directory itself ("."), and up to its last "/"
+           for a file below it.
+           mutant: src/state-paths.c:209 `mkdir(duppath, 0755) && errno != EEXIST` -> `0`
+           input: nested */
         if (stat(path, &st) != 0 || !S_ISDIR(st.st_mode))
             abort();
         free(want);
