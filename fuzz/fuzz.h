@@ -6,36 +6,25 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <sys/socket.h>
 
 #include "../src/utils.h"
 #include "../src/protocol.h"
 
 #define FUZZ_MAX_INPUT 4096
 
-/* Where protocol_parse() answers: one end of a socketpair, the other end drained after each input so the
-   answer of one input never blocks the next. Returns the sender id to put in msg_t. */
-static int fuzz_peer_fd = -1;
-static int fuzz_sender_fd = -1;
+/* Where protocol_parse() answers: fuzz/socket_fuzz.c replaces src/socket.c in every harness, and its socket_send()
+   appends each reply, with its NUL, to fuzz_reply. A harness empties it before an input and reads it after. */
+#define FUZZ_REPLY_MAX 65536
+extern char fuzz_reply[FUZZ_REPLY_MAX];
+extern size_t fuzz_reply_len;
 
-static void fuzz_peer_open(void)
-{
-    int fd[2];
-    /* not a property: the harness could not open its own socketpair */
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, fd) != 0)
-        abort();
-    fuzz_sender_fd = fd[0];
-    fuzz_peer_fd = fd[1];
-    fcntl(fuzz_peer_fd, F_SETFL, O_NONBLOCK);
-    fcntl(fuzz_sender_fd, F_SETFL, O_NONBLOCK);
-}
+/* the sender id to put in msg_t: any value but STDOUT_FILENO, which the parser writes to directly */
+#define FUZZ_SENDER 7
 
-static void fuzz_peer_drain(void)
+static void fuzz_reply_clear(void)
 {
-    char buf[4096];
-    while (read(fuzz_peer_fd, buf, sizeof(buf)) > 0)
-        ;
+    fuzz_reply_len = 0;
+    fuzz_reply[0] = '\0';
 }
 
 /* The input as the NUL-terminated message the socket layer hands the parser (it cuts at the first NUL). */

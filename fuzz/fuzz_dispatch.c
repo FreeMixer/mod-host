@@ -2,7 +2,7 @@
    unsupported tables over a backend whose answers depend on the input, then protocol_parse(). The backend
    answers every error code the host defines, so each verb's mapping of a return value to a reply is reached.
    Properties: no crash, no leak, and every reply is one NUL-terminated string: "resp <int>", alone or followed
-   by the values of the verb, or an error message of protocol_error_message(). */
+   by the values of the verb, or one of the four protocol error messages. */
 #include "fuzz.h"
 #include "../src/host-backend.h"
 #include "../src/host-dispatch.h"
@@ -80,7 +80,6 @@ static const host_plugin_info_t g_info = { f_track_info, f_remote_pages, f_remot
 int LLVMFuzzerInitialize(int *argc, char ***argv)
 {
     (void)argc; (void)argv;
-    fuzz_peer_open();
     host_dispatch_register(&g_backend);
     host_dispatch_register_monitor_output(f_monitor_output);
     host_dispatch_register_plugin_info(&g_info);
@@ -94,31 +93,37 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
         return 0;
 
     g_salt = data[0];
+    fuzz_reply_clear();
     msg_t msg;
     msg.data = fuzz_message(data + 1, size - 1);
     msg.data_size = strlen(msg.data);
-    msg.sender_id = fuzz_sender_fd;
+    msg.sender_id = FUZZ_SENDER;
     protocol_parse(&msg);
     free(msg.data);
 
-    char reply[8192];
-    ssize_t n = read(fuzz_peer_fd, reply, sizeof(reply) - 1);
-    if (n > 0)
-    {
-        /* One answer per command, sent with its NUL: the NUL is the last byte read and the only one.
-           mutant: src/protocol.c:224 `proto.response_size+1` -> `proto.response_size`
-           input: scenario-1 */
-        if (memchr(reply, '\0', (size_t)n) != reply + n - 1)
-            abort();
-        int known = 0;
-        for (int code = -1; code >= -4 && !known; code--)
-            known = strcmp(reply, protocol_error_message(code)) == 0;
-        /* The answer is a protocol error message, or "resp" and an integer, then the end or a space.
-           mutant: src/protocol.c:276 `"resp %i"` -> `"rsp %i"`
-           input: scenario-1 */
-        if (!known && !is_resp_line(reply))
-            abort();
-    }
-    fuzz_peer_drain();
+    /* Each command gets a reply: the callback's, or a protocol error message.
+       mutant: src/host-dispatch.c:69 `protocol_response_int(resp, proto);` -> ``
+       input: scenario-1 */
+    if (fuzz_reply_len == 0)
+        abort();
+    const char *reply = fuzz_reply;
+    size_t n = fuzz_reply_len;
+    /* One answer per command, sent with its NUL: the NUL is the last byte and the only one.
+       mutant: src/protocol.c:224 `proto.response_size+1` -> `proto.response_size`
+       input: scenario-1 */
+    if (memchr(reply, '\0', n) != reply + n - 1)
+        abort();
+    static const char *const texts[] = { "not found", "many arguments", "few arguments", "invalid argument" };
+    int known = 0;
+    for (int i = 0; i < 4 && !known; i++)
+        known = strcmp(reply, texts[i]) == 0;
+    /* The answer is one of the four protocol error messages, written out here, or "resp" and an integer, then the end
+       or a space.
+       mutant: src/protocol.c:302 `g_error_messages[-code-1]` -> `g_error_messages[-code-1] + 1`
+       input: extra-17
+       mutant: src/protocol.c:278 `"resp %i"` -> `"rsp %i"`
+       input: scenario-1 */
+    if (!known && !is_resp_line(reply))
+        abort();
     return 0;
 }
