@@ -7,7 +7,7 @@
 #include "../src/host-scenario.h"
 #include <stdio.h>
 
-static char g_path[64];
+static const char g_path[] = "fuzz-scenario.txt";
 
 static const char *skip_blanks(const char *p, const char *end)
 {
@@ -64,7 +64,6 @@ static const char *find(const char *from, const char *to, const char *what)
 int LLVMFuzzerInitialize(int *argc, char ***argv)
 {
     (void)argc; (void)argv;
-    snprintf(g_path, sizeof(g_path), "/tmp/fuzz-scenario-%d.txt", (int)getpid());
     return 0;
 }
 
@@ -134,7 +133,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     {
         /* A load answers the number of lines it kept, and never keeps more than the list holds.
            mutant: src/host-scenario.c:242 `return list->count;` -> `return list->count + 1;`
-           input: host-scenarios */
+           input: nul */
         if (n != list.count || n > HOST_SCENARIO_MAX_LINES)
             abort();
         int whole = 0;
