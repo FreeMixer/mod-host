@@ -24,3 +24,5 @@ tests/protocol_commands_test
 tests/host_scenarios
 libmod-host-protocol.so*
 /build/
+/fuzz-scenario.txt
+/fuzz-statepaths/

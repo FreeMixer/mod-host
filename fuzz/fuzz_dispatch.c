@@ -4,6 +4,7 @@
    Properties: no crash, no leak, and every reply is one NUL-terminated string: "resp <int>", alone or followed
    by the values of the verb, or one of the four protocol error messages. */
 #include "fuzz.h"
+#include <stdio.h>
 #include "../src/host-backend.h"
 #include "../src/host-dispatch.h"
 #include "../src/host-errors.h"
@@ -77,6 +78,45 @@ static const host_backend_t g_backend = {
 };
 static const host_plugin_info_t g_info = { f_track_info, f_remote_pages, f_remote_page_get, f_param_info };
 
+/* The whole reply the dispatcher must give for a verb whose answer comes from the backend above alone: the words of the
+   command and the salt decide it. Answers 0 for a verb or a word count this does not cover. */
+static int expected_reply(char *out, size_t size, char *const *w, unsigned n)
+{
+    if (n == 0)
+        return 0;
+    int instance = n > 1 ? atoi(w[1]) : 0;
+    if (strcmp(w[0], "remove") == 0 && n == 2)
+        snprintf(out, size, "resp %i", answer(instance));
+    else if (strcmp(w[0], "bypass") == 0 && n == 3)
+        snprintf(out, size, "resp %i", answer(instance));
+    else if (strcmp(w[0], "param_set") == 0 && n == 4)
+        snprintf(out, size, "resp %i", answer(instance));
+    else if (strcmp(w[0], "preset_load") == 0 && n == 3)
+        snprintf(out, size, "resp %i", answer(instance));
+    else if (strcmp(w[0], "state_save") == 0 && n == 2)
+        snprintf(out, size, "resp %i", answer((int)strlen(w[1])));
+    else if (strcmp(w[0], "state_load") == 0 && n == 2)
+        snprintf(out, size, "resp %i", answer((int)strlen(w[1])));
+    else if ((strcmp(w[0], "connect") == 0 || strcmp(w[0], "disconnect") == 0) && n == 3)
+        snprintf(out, size, "resp %i", answer((int)(strlen(w[1]) + strlen(w[2]))));
+    else if (strcmp(w[0], "monitor_output") == 0 && n == 3)
+        snprintf(out, size, "resp %i", !answer(instance));
+    else if (strcmp(w[0], "remote_pages") == 0 && n == 2)
+        snprintf(out, size, "resp %i", instance < 0 ? answer(instance) : instance % 4);
+    else if (strcmp(w[0], "param_get") == 0 && n == 3)
+    {
+        /* the backend hands back the instance as the value, and only a success carries it */
+        int resp = answer(instance);
+        if (resp >= 0)
+            snprintf(out, size, "resp %i %.04f", resp, (double)(float)instance);
+        else
+            snprintf(out, size, "resp %i", resp);
+    }
+    else
+        return 0;
+    return 1;
+}
+
 int LLVMFuzzerInitialize(int *argc, char ***argv)
 {
     (void)argc; (void)argv;
@@ -98,6 +138,35 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     msg.data = fuzz_message(data + 1, size - 1);
     msg.data_size = strlen(msg.data);
     msg.sender_id = FUZZ_SENDER;
+
+    /* the words of the command, split on spaces (a message with a quote, a backslash, a "%" or a "..." in it is left
+       to the shape checks below: quotes join and cut words, and the parser takes a pattern's own wildcard for a match) */
+    char *copy = strdup(msg.data);
+    char *words[8];
+    unsigned count = 0;
+    char expect[256];
+    int modeled = 0;
+    /* not a property: the harness's own allocation failed */
+    if (!copy)
+        abort();
+    if (strpbrk(copy, "%\"\\") == NULL && strstr(copy, "...") == NULL)
+    {
+        size_t len = strlen(copy);
+        while (len > 0 && (copy[len - 1] == ' ' || copy[len - 1] == '\t' || copy[len - 1] == '\r' || copy[len - 1] == '\n'))
+            copy[--len] = '\0';
+        for (char *p = copy; count < 8;)
+        {
+            words[count++] = p;
+            p = strchr(p, ' ');
+            if (!p)
+                break;
+            *p++ = '\0';
+            while (*p == ' ')
+                p++;
+        }
+        modeled = count < 8 && expected_reply(expect, sizeof(expect), words, count);
+    }
+
     protocol_parse(&msg);
     free(msg.data);
 
@@ -113,6 +182,12 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
        input: scenario-1 */
     if (memchr(reply, '\0', n) != reply + n - 1)
         abort();
+    /* The reply to a command of the verbs above is the whole text the backend's answer makes, value included.
+       mutant: src/host-dispatch.c:143 `resp, value);` -> `resp, 0.0);`
+       input: param-get */
+    if (modeled && strcmp(reply, expect) != 0)
+        abort();
+    free(copy);
     static const char *const texts[] = { "not found", "many arguments", "few arguments", "invalid argument" };
     int known = 0;
     for (int i = 0; i < 4 && !known; i++)
