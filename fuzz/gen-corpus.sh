@@ -52,6 +52,9 @@ param_get 99999999999999999999 gain
 param_set -1 gain nan
 SEEDS
 
+# a verb whose reply carries a value, with a salt that makes the backend succeed
+printf '\006param_get 3 gain' > "$out/dispatch/param-get"
+
 # the scenario file reader: the real file, and its edges
 cp "$scen" "$out/scenario/host-scenarios"
 printf 'add $URI 3 => resp 3\n@state_save remove 3 => resp 0\n' > "$out/scenario/guarded"
@@ -59,6 +62,7 @@ printf 'no arrow here\n' > "$out/scenario/no-arrow"
 printf '@guard_only => x\n' > "$out/scenario/guard-no-command"
 printf 'cmd $URI $UNKNOWN $EMPTY => $PORT_A | resp 0\n' > "$out/scenario/vars"
 printf '# comment\n\n   \n' > "$out/scenario/blank"
+printf 'a => b\n\000' > "$out/scenario/nul"
 
 # the state paths: an instance number and a request path
 seed() { printf "$1" > "$out/statepaths/$2"; }
