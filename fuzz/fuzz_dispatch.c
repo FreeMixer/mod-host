@@ -103,6 +103,53 @@ static int expected_reply(char *out, size_t size, char *const *w, unsigned n)
         snprintf(out, size, "resp %i", !answer(instance));
     else if (strcmp(w[0], "remote_pages") == 0 && n == 2)
         snprintf(out, size, "resp %i", instance < 0 ? answer(instance) : instance % 4);
+    else if (strcmp(w[0], "add") == 0 && n >= 3)
+    {
+        int added = atoi(w[2]);
+        snprintf(out, size, "resp %i", added >= 0 ? added : answer(added));
+    }
+    else if (strcmp(w[0], "track_info") == 0 && n >= 4)
+    {
+        /* a name of printable ASCII below 256 bytes, a colour "-" or "#" and six hex digits, a kind of bus, return or
+           master, and at most one word after the colour; a name with a byte of 0x80 or more is left to the shape checks */
+        const char *name = w[2], *color = w[3], *kind = n > 4 ? w[4] : NULL;
+        int valid = strlen(name) < 256 && n <= 5;
+        for (const char *c = name; *c; c++)
+        {
+            if ((unsigned char)*c >= 0x80)
+                return 0;
+            if ((unsigned char)*c < 0x20 || *c == 0x7f)
+                valid = 0;
+        }
+        valid = valid && (strcmp(color, "-") == 0 ||
+                          (strlen(color) == 7 && color[0] == '#' && strspn(color + 1, "0123456789abcdefABCDEF") == 6));
+        valid = valid && (!kind || strcmp(kind, "bus") == 0 || strcmp(kind, "return") == 0 || strcmp(kind, "master") == 0);
+        snprintf(out, size, "resp %i", valid ? answer(instance) : ERR_INVALID_OPERATION);
+    }
+    else if (strcmp(w[0], "remote_page_get") == 0 && n == 3)
+    {
+        int page = atoi(w[2]);
+        /* a refusal that is a success (answer() can be SUCCESS) leaves the page as the dispatcher zeroed it */
+        if (instance < 0 || page < 0)
+        {
+            if (answer(instance) < 0)
+                snprintf(out, size, "resp %i", answer(instance));
+            else
+                snprintf(out, size, "resp 0 0 \"\" \"\" - - - - - - - -");
+        }
+        else
+            snprintf(out, size, "resp 0 %i \"Main \\\"A\\\"\\\" \"Page\" gain - - - - - - -", page);
+    }
+    else if (strcmp(w[0], "param_info") == 0 && n == 3)
+    {
+        /* a refusal that is a success would print the strings the backend never set: not modeled */
+        if (instance < 0 && answer(instance) >= 0)
+            return 0;
+        if (instance < 0)
+            snprintf(out, size, "resp %i", answer(instance));
+        else
+            snprintf(out, size, "resp 0 hz log 20 20000 440 %i stable", instance % 3);
+    }
     else if (strcmp(w[0], "param_get") == 0 && n == 3)
     {
         /* the backend hands back the instance as the value, and only a success carries it */
@@ -184,7 +231,9 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
         abort();
     /* The reply to a command of the verbs above is the whole text the backend's answer makes, value included.
        mutant: src/host-dispatch.c:143 `resp, value);` -> `resp, 0.0);`
-       input: param-get */
+       input: param-get
+       mutant: src/host-dispatch.c:376 `info.max` -> `info.min`
+       input: extra-8 */
     if (modeled && strcmp(reply, expect) != 0)
         abort();
     free(copy);
