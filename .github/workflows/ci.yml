@@ -35,7 +35,7 @@ jobs:
       - name: Install the protocol library
         run: timeout 300 make test-install-lib
       - name: Protocol tests
-        run: timeout 300 make test-protocol
+        run: timeout 300 make test-protocol test-protocol-commands
       - name: Splitter and framing tests
         run: timeout 300 make -C tests utils-run socket-run
       - name: Smoke test
@@ -83,7 +83,7 @@ jobs:
       - name: Install the protocol library
         run: timeout 300 make test-install-lib
       - name: Protocol tests
-        run: timeout 300 make test-protocol
+        run: timeout 300 make test-protocol test-protocol-commands
       - name: Splitter and framing tests
         run: timeout 300 make -C tests utils-run socket-run
       - name: Smoke test

@@ -20,6 +20,7 @@ tests/self-test-result.json
 src/info.h
 PKGBUILD
 tests/protocol_test
+tests/protocol_commands_test
 tests/host_scenarios
 libmod-host-protocol.so*
 /build/
