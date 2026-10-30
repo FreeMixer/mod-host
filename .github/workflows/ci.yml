@@ -54,7 +54,7 @@ jobs:
       - name: Build the harnesses
         run: make fuzz
       - name: Run each harness over its seed corpus
-        run: make fuzz-run FUZZ_TIME=30
+        run: make fuzz-run FUZZ_TIME=60
       - name: Keep what a failing run found
         if: failure()
         uses: actions/upload-artifact@v4
