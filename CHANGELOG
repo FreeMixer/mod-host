@@ -1,3 +1,13 @@
+Unreleased
+==========
+
+  - changed: the socket and feedback ports listen on 127.0.0.1 unless told
+    otherwise; they listened on every address of the machine. A controller on
+    another host now needs `-b <address>` (`--bind-address`), `-b 0.0.0.0` for
+    every address, or MOD_DEVICE_HOST_BIND_ADDRESS for a JACK internal client.
+  - new: socket_set_bind_address() in libmod-host-protocol, called before
+    socket_start().
+
 0.10.8
 ======
 
