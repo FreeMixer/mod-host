@@ -36,14 +36,14 @@ Description: mod-host socket server, line protocol and command dispatch
  without any plugin format behind them, as a shared library, for hosts that
  answer the mod-host protocol with a plugin backend of their own.
 
-Package: mod-host-protocol-dev
+Package: libmod-host-protocol-dev
 Section: libdevel
 Architecture: any
 Multi-Arch: same
 Depends: libmod-host-protocol0 (= ${binary:Version}), ${misc:Depends}
-Provides: libmod-host-protocol-dev
-Conflicts: libmod-host-protocol-dev
-Replaces: libmod-host-protocol-dev
+Provides: mod-host-protocol-dev (= ${binary:Version})
+Conflicts: mod-host-protocol-dev (<< 0.10.9~)
+Replaces: mod-host-protocol-dev (<< 0.10.9~)
 Description: mod-host protocol library, development files
  Headers, the pkg-config file and the backend scenarios of
  libmod-host-protocol, for hosts that answer the mod-host protocol with a
