@@ -33,6 +33,12 @@ jobs:
             liblilv-dev libjack-jackd2-dev jackd2 libreadline-dev lv2-dev libfftw3-dev
       - name: Build
         run: make -j"$(nproc)" && make lib
+      - name: The version is what the packaging passes, else what git describes
+        run: |
+          ./mod-host -V | grep -F "version: $(git describe --tags)"
+          make clean >/dev/null && make -j"$(nproc)" VERSION=9.9.9-test >/dev/null
+          ./mod-host -V | grep -F 'version: 9.9.9-test'
+          make clean >/dev/null && make -j"$(nproc)" >/dev/null && make lib >/dev/null
       - name: Install the protocol library
         run: timeout 300 make test-install-lib
       - name: Protocol tests
@@ -119,4 +125,5 @@ jobs:
           rpm -q --provides mod-host-protocol | grep -q '^libmod-host-protocol\.so\.0'
           rpm -q --provides mod-host-protocol-devel | grep -q '^pkgconfig(mod-host-protocol)'
           pkg-config --modversion mod-host-protocol
-          test -x /usr/bin/mod-host
+          /usr/bin/mod-host -V | grep -F "version: $version" \
+            || { echo "::error::mod-host -V does not print version: $version"; /usr/bin/mod-host -V; exit 1; }
