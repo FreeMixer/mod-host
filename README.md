@@ -25,16 +25,16 @@ This repository is a fork of [mod-audio/mod-host](https://github.com/mod-audio/m
 | [#109](https://github.com/mod-audio/mod-host/pull/109) | plugin info commands: `param_info`, `remote_pages`, `track_info` | open |
 | [#112](https://github.com/mod-audio/mod-host/pull/112) | trimming spaces no longer reads before an empty string | open |
 | [#113](https://github.com/mod-audio/mod-host/pull/113) | socket input split into NUL-terminated commands, plus a follow-up so the protocol tests send the NUL | open |
+| [#116](https://github.com/mod-audio/mod-host/pull/116) | the command table holds 128 commands, and one past them is refused out loud | open |
+| [FreeMixer/mod-host#12](https://github.com/FreeMixer/mod-host/pull/12) | the socket and feedback ports listen on 127.0.0.1 unless `-b` or `socket_set_bind_address()` says otherwise | not offered yet |
 
-Packages:
+Packages, both built from this branch at one version:
 
-- Debian (bookworm, which Raspberry Pi OS uses, and trixie; amd64 and arm64): `debian/` in this branch builds
-  `mod-host`, `libmod-host-protocol0` and `mod-host-protocol-dev`. A `v<version>` tag runs
-  `.github/workflows/release.yml`, which attaches them to the GitHub release.
-- RPM: the Fedora packages `mod-host`, `mod-host-protocol` and `mod-host-protocol-devel` are built from upstream
-  commit f14a230 with these same pull requests applied as patch files, by the audinux spec
-  ([audinux/fedora-spec#94](https://github.com/audinux/fedora-spec/pull/94)) and by
-  [FreeMixer/.github](https://github.com/FreeMixer/.github/tree/main/packaging/mod-host) for our channel.
+- Debian (bookworm, which Raspberry Pi OS uses, and trixie; amd64 and arm64): `debian/` builds `mod-host`,
+  `libmod-host-protocol0` and `libmod-host-protocol-dev`, named `<package>_<version>_<distro>_<arch>.deb`.
+- RPM (Fedora): `packaging/mod-host.spec` builds `mod-host`, `mod-host-protocol` and `mod-host-protocol-devel`.
+
+A `v<version>` tag runs `.github/workflows/release.yml`, which attaches both to the GitHub release.
 
 The protocol library is opt-in: `make lib` builds it and `make install-lib PREFIX=... [LIBDIR=...] [DESTDIR=...]`
 installs `libmod-host-protocol.so.0` with its soname and development links, its headers under

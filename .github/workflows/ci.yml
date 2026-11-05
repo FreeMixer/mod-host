@@ -4,7 +4,8 @@ name: ci
 # pkg-config alone, runs the tests that need no plugins
 # (the socket protocol against a fake backend, the AddressSanitizer tests of the
 # line splitter and the socket framing) and a smoke test of the real host on a
-# dummy JACK server. The fuzz job builds the libFuzzer harnesses of fuzz/ and runs each for
+# dummy JACK server. The rpm job builds the RPMs of packaging/mod-host.spec from this
+# tree, at the version debian/changelog names, and installs them. The fuzz job builds the libFuzzer harnesses of fuzz/ and runs each for
 # a short time over its seed corpus.
 
 on:
@@ -88,3 +89,34 @@ jobs:
         run: timeout 300 make -C tests utils-run socket-run bind-run
       - name: Smoke test
         run: timeout 120 sh .github/scripts/smoke-test.sh
+
+  rpm:
+    runs-on: ubuntu-latest
+    container: fedora:44
+    timeout-minutes: 30
+    steps:
+      - name: Install the build tools
+        run: |
+          dnf install -y --setopt=install_weak_deps=False git rpm-build dnf5-plugins gcc make tar gzip python3 \
+            pipewire-jack-audio-connection-kit-devel dpkg-dev
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: One version for the DEBs and the RPMs
+        run: |
+          deb=$(dpkg-parsechangelog -S Version)
+          rpm=$(sed -n 's/^Version: *//p' packaging/mod-host.spec)
+          [ "${deb%-*}" = "$rpm" ] || { echo "::error::debian/changelog says $deb, packaging/mod-host.spec says $rpm"; exit 1; }
+      - uses: FreeMixer/.github/.github/actions/build-rpm@v1
+      - name: Install the packages
+        run: |
+          dnf install -y --setopt=install_weak_deps=False rpms/mod-host-[0-9]*.x86_64.rpm \
+            rpms/mod-host-protocol-[0-9]*.x86_64.rpm rpms/mod-host-protocol-devel-[0-9]*.x86_64.rpm
+          version=$(sed -n 's/^Version: *//p' packaging/mod-host.spec)
+          rpm -q --provides mod-host-protocol | grep -q "^mod-host-protocol = $version-" \
+            || { echo "::error::mod-host-protocol does not provide its version $version"; exit 1; }
+          rpm -q --provides mod-host-protocol | grep -q '^libmod-host-protocol\.so\.0'
+          rpm -q --provides mod-host-protocol-devel | grep -q '^pkgconfig(mod-host-protocol)'
+          pkg-config --modversion mod-host-protocol
+          test -x /usr/bin/mod-host
