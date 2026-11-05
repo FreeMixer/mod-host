@@ -1,10 +1,11 @@
 name: release
 
 # A version tag v<version>, where <version> is the upstream part of the
-# debian/changelog version, builds the DEBs for amd64 and arm64 on Debian
-# bookworm (Raspberry Pi OS) and trixie, each on a runner of its own
-# architecture, lints them and attaches them to the GitHub release of the tag.
-# A manual run builds the same DEBs as an artifact and releases nothing.
+# debian/changelog version and the Version of packaging/mod-host.spec, builds
+# the DEBs for amd64 and arm64 on Debian bookworm (Raspberry Pi OS) and trixie
+# and the RPMs for x86_64 and aarch64 on Fedora, each on a runner of its own
+# architecture, from this tree, and attaches them to the GitHub release of the
+# tag. A manual run builds the same packages as artifacts and releases nothing.
 #
 # Not done here: signing an apt index and publishing into the package channel.
 # That needs the organisation's packages signing key and a token for the Pages
@@ -64,9 +65,10 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           dpkg-buildpackage -b -us -uc
           mkdir -p out
+          # <name>_<version>_<distro>_<arch>.deb, as every FreeMixer package names its assets
           for f in ../*.deb; do
             b=$(basename "$f" .deb)
-            cp "$f" "out/${b}_${{ matrix.suite }}.deb"
+            cp "$f" "out/${b%_*}_${{ matrix.suite }}_${b##*_}.deb"
           done
           ls -l out
 
@@ -76,7 +78,7 @@ jobs:
       - name: Install and smoke test the package
         run: |
           apt-get install -y --no-install-recommends python3 jackd2 \
-            ../mod-host_*.deb ../libmod-host-protocol0_*.deb ../mod-host-protocol-dev_*.deb
+            ../mod-host_*.deb ../libmod-host-protocol0_*.deb ../libmod-host-protocol-dev_*.deb
           pkg-config --modversion mod-host-protocol
           cp /usr/bin/mod-host ./mod-host
           timeout 120 sh .github/scripts/smoke-test.sh
@@ -86,20 +88,68 @@ jobs:
           name: deb-${{ matrix.suite }}-${{ matrix.arch }}
           path: out/*.deb
 
+  rpm:
+    name: rpm fc${{ matrix.fedora }} ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, aarch64]
+        fedora: [44]
+    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    container: fedora:${{ matrix.fedora }}
+    timeout-minutes: 30
+    steps:
+      # pipewire's jack first: the builddep would otherwise pull jack-audio-connection-kit-devel
+      - name: Install the build tools
+        run: |
+          dnf install -y --setopt=install_weak_deps=False git rpm-build dnf5-plugins gcc make tar gzip python3 \
+            pipewire-jack-audio-connection-kit-devel
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      # the spec's Version must be the tag's, as debian/changelog's is
+      - uses: FreeMixer/.github/.github/actions/build-rpm@v1
+        with:
+          tag: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+
+      - name: Install the packages
+        run: |
+          dnf install -y --setopt=install_weak_deps=False rpms/mod-host-[0-9]*.${{ matrix.arch }}.rpm \
+            rpms/mod-host-protocol-[0-9]*.${{ matrix.arch }}.rpm rpms/mod-host-protocol-devel-[0-9]*.${{ matrix.arch }}.rpm
+          pkg-config --modversion mod-host-protocol
+          test -x /usr/bin/mod-host
+
+      # the source package comes out of both architectures under one name; the first one ships it
+      - name: Stage the release
+        run: |
+          mkdir -p out
+          cp rpms/*.${{ matrix.arch }}.rpm out/
+          [ "${{ matrix.arch }}" != x86_64 ] || cp rpms/*.src.rpm out/
+          rm -f out/*-debug*.rpm
+          ls -l out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpm-fc${{ matrix.fedora }}-${{ matrix.arch }}
+          path: out/*.rpm
+
   release:
-    needs: deb
+    needs: [deb, rpm]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with:
-          path: debs
+          path: packages
           merge-multiple: true
-      - name: Attach the DEBs to the release
+      - name: Attach the DEBs and RPMs to the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
             || gh release create "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --verify-tag \
                  --title "$GITHUB_REF_NAME" --notes "mod-host with the patches of the freemixer branch."
-          gh release upload "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --clobber debs/*.deb
+          gh release upload "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --clobber packages/*.deb packages/*.rpm
