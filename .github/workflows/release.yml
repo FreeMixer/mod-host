@@ -81,6 +81,10 @@ jobs:
           apt-get install -y --no-install-recommends python3 jackd2 \
             ../mod-host_*.deb ../libmod-host-protocol0_*.deb ../libmod-host-protocol-dev_*.deb
           pkg-config --modversion mod-host-protocol
+          # the packaged binary names the package's version, not git's description of the build tree
+          version=$(dpkg-parsechangelog -S Version); version=${version%-*}
+          /usr/bin/mod-host -V | grep -F "version: $version" \
+            || { echo "::error::mod-host -V does not print version: $version"; /usr/bin/mod-host -V; exit 1; }
           cp /usr/bin/mod-host ./mod-host
           timeout 120 sh .github/scripts/smoke-test.sh
 

@@ -1,3 +1,9 @@
+mod-host (0.10.10-1) unstable; urgency=medium
+
+  * 0.10.10: mod-host -V prints the package version instead of 0.0.0.
+
+ -- Pau Aliagas <linuxnow@gmail.com>  Thu, 05 Nov 2026 18:30:00 +0100
+
 mod-host (0.10.9-1) unstable; urgency=medium
 
   * 0.10.9: the socket and feedback ports listen on 127.0.0.1 unless told

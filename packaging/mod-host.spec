@@ -1,7 +1,7 @@
 # The RPMs of the FreeMixer fork of mod-host, built from this tree as the DEBs of debian/ are, at the
 # same version. The fork carries the upstream pull requests as commits (README.md); no patch is applied here.
 Name: mod-host
-Version: 0.10.9
+Version: 0.10.10
 Release: 1%{?dist}
 License: GPL-3.0-or-later
 Summary: LV2 host for JACK, controllable over a socket or the command line
@@ -50,16 +50,17 @@ Headers, the pkg-config file and the backend scenarios of libmod-host-protocol.
 %build
 %set_build_flags
 # the Makefile strips with -s; the debuginfo split needs the symbols
-%make_build PREFIX=%{_prefix} LIBDIR=%{_libdir} LDFLAGS="%{build_ldflags}" all
-%make_build PREFIX=%{_prefix} LIBDIR=%{_libdir} LDFLAGS="%{build_ldflags}" lib
+%make_build PREFIX=%{_prefix} LIBDIR=%{_libdir} LDFLAGS="%{build_ldflags}" VERSION=%{version} all
+%make_build PREFIX=%{_prefix} LIBDIR=%{_libdir} LDFLAGS="%{build_ldflags}" VERSION=%{version} lib
 
 %install
-%make_install PREFIX=%{_prefix} LIBDIR=%{_libdir} MANDIR=%{_mandir}/man1 LDFLAGS="%{build_ldflags}" install-lib
+%make_install PREFIX=%{_prefix} LIBDIR=%{_libdir} MANDIR=%{_mandir}/man1 LDFLAGS="%{build_ldflags}" VERSION=%{version} install-lib
 install -D -m 644 packaging/%{name}.service %{buildroot}%{_unitdir}/%{name}.service
 install -D -m 644 packaging/%{name}.service %{buildroot}%{_userunitdir}/%{name}.service
 
 %check
-make PREFIX=%{_prefix} LIBDIR=%{_libdir} LDFLAGS="%{build_ldflags}" test-protocol test-protocol-commands
+./mod-host -V | grep -F 'version: %{version}'
+make PREFIX=%{_prefix} LIBDIR=%{_libdir} LDFLAGS="%{build_ldflags}" VERSION=%{version} test-protocol test-protocol-commands
 
 %files
 %license COPYING
