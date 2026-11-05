@@ -67,6 +67,7 @@ jobs:
           mkdir -p out
           # <name>_<version>_<distro>_<arch>.deb, as every FreeMixer package names its assets
           for f in ../*.deb; do
+            case $f in *-dbgsym_*) continue ;; esac
             b=$(basename "$f" .deb)
             cp "$f" "out/${b%_*}_${{ matrix.suite }}_${b##*_}.deb"
           done

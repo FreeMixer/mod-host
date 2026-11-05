@@ -1,7 +1,7 @@
 # The RPMs of the FreeMixer fork of mod-host, built from this tree as the DEBs of debian/ are, at the
 # same version. The fork carries the upstream pull requests as commits (README.md); no patch is applied here.
 Name: mod-host
-Version: 0.10.8
+Version: 0.10.9
 Release: 1%{?dist}
 License: GPL-3.0-or-later
 Summary: LV2 host for JACK, controllable over a socket or the command line
