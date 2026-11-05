@@ -1,3 +1,10 @@
+0.10.10
+=======
+
+  - fix: `mod-host -V` prints the package version; the packaged binaries
+    printed 0.0.0, the fallback when the build tree has no git description.
+    The packaging passes VERSION to make.
+
 0.10.9
 ======
 
