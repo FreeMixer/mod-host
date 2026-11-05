@@ -1,3 +1,11 @@
+mod-host (0.10.9-1) unstable; urgency=medium
+
+  * 0.10.9: the socket and feedback ports listen on 127.0.0.1 unless told
+    otherwise (#12); RPMs built from this tree at the same version (#13);
+    the development package is libmod-host-protocol-dev.
+
+ -- Pau Aliagas <linuxnow@gmail.com>  Thu, 05 Nov 2026 14:00:00 +0100
+
 mod-host (0.10.8-1) unstable; urgency=medium
 
   * 0.10.8: the protocol's command table holds 128 commands and refuses one
